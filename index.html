@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>農產物收據自動化系統</title>
+    <style>
+        /* 基本手機版 UI 設定 */
+        body { font-family: "Microsoft JhengHei", "微軟正黑體", sans-serif; margin: 0; padding: 0; background-color: #f3f4f6; color: #333; }
+        .control-panel { padding: 20px; background-color: #fff; box-shadow: 0 2px 8px rgba(0,0,0,0.1); margin-bottom: 20px; border-bottom: 4px solid #4CAF50; }
+        h1 { font-size: 1.4rem; color: #2c3e50; margin-top: 0; }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; font-size: 14px; color: #555; }
+        input { width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 8px; box-sizing: border-box; font-size: 16px; }
+        input:focus { outline: none; border-color: #4CAF50; box-shadow: 0 0 5px rgba(76, 175, 80, 0.3); }
+        .flex-row { display: flex; gap: 15px; }
+        .flex-row .form-group { flex: 1; }
+        button { background-color: #4CAF50; color: white; padding: 15px 20px; border: none; border-radius: 8px; font-size: 18px; width: 100%; cursor: pointer; font-weight: bold; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        button:active { background-color: #45a049; transform: translateY(2px); box-shadow: none; }
+        
+        /* A4 列印排版設定 */
+        .receipt-wrapper { background: #fff; padding: 10px; overflow-x: auto; }
+        .receipt-page { width: 210mm; min-height: 297mm; margin: 0 auto; padding: 15mm; background: white; box-sizing: border-box; position: relative; }
+        .receipt-title { text-align: center; font-size: 26px; font-weight: bold; letter-spacing: 3px; margin-bottom: 15px; }
+        .receipt-date { text-align: right; margin-bottom: 15px; font-size: 18px; }
+        table.receipt-table { width: 100%; border-collapse: collapse; border: 2px solid black; }
+        table.receipt-table th, table.receipt-table td { border: 1px solid black; padding: 12px; font-size: 18px; }
+        .center { text-align: center; }
+        .bold { font-weight: bold; }
+        .stamp-box { color: red; border: 2px solid red; display: inline-block; padding: 10px 15px; font-weight: bold; font-size: 20px; border-radius: 5px; }
+        
+        /* 左側直書側註 */
+        .side-note { position: absolute; left: 5mm; top: 30mm; writing-mode: vertical-rl; font-size: 14px; letter-spacing: 2px; height: 240mm; }
+
+        /* 列印模式隱藏 UI */
+        @media print {
+            body { background: white; }
+            .no-print { display: none !important; }
+            .receipt-wrapper { padding: 0; overflow: visible; }
+            .receipt-page { margin: 0; padding: 10mm 15mm; width: 100%; height: 100%; box-shadow: none; border: none; page-break-after: avoid; }
+            @page { size: A4 portrait; margin: 0; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="control-panel no-print">
+    <h1>🐑 羊奶收據出貨系統</h1>
+    <p style="font-size:13px; color:#7f8c8d;">系統會自動計算總額與中文大寫，避免手算誤差。</p>
+    
+    <div class="form-group">
+        <label>🗓️ 開立日期</label>
+        <input type="date" id="input-date">
+    </div>
+    
+    <div class="form-group">
+        <label>🏪 購買商號名稱</label>
+        <input type="text" id="input-buyer-name" placeholder="請輸入客戶名稱">
+    </div>
+    
+    <div class="form-group">
+        <label>📄 統一編號</label>
+        <input type="text" id="input-buyer-taxid" placeholder="若無可空白">
+    </div>
+    
+    <div class="form-group">
+        <label>📍 買方地址</label>
+        <input type="text" id="input-buyer-addr" placeholder="若無可空白">
+    </div>
+
+    <hr style="margin:20px 0; border:0; border-top:1px dashed #ccc;">
+
+    <div class="flex-row">
+        <div class="form-group">
+            <label>🍼 五寮尖大羊奶 (單價 141)</label>
+            <input type="number" id="input-qty1" placeholder="輸入瓶數" min="0">
+        </div>
+        <div class="form-group">
+            <label>🥛 五寮尖中羊奶 (單價 83)</label>
+            <input type="number" id="input-qty2" placeholder="輸入瓶數" min="0">
+        </div>
+    </div>
+
+    <button onclick="window.print()">🖨️ 列印 A4 收據</button>
+</div>
+
+<div class="receipt-wrapper">
+    <div class="receipt-page">
+        <div class="side-note">本收據之農民身分確實無誤，若有不實者願依法接受處罰。 對內容有疑問請優先聯繫 : 0923-287-545</div>
+        
+        <div class="receipt-title">農（漁、牧）民出售 農（漁、牧）產物 收據</div>
+        <div class="receipt-date">中華民國 <span id="p-yy"></span> 年 <span id="p-mm"></span> 月 <span id="p-dd"></span> 日</div>
+        
+        <table class="receipt-table">
+            <tr>
+                <td rowspan="2" style="width: 15%" class="center">購買商號名稱：</td>
+                <td rowspan="2" style="width: 35%" id="p-buyerName"></td>
+                <td style="width: 15%" class="center">統一編號：</td>
+                <td style="width: 35%" id="p-buyerTaxId"></td>
+            </tr>
+            <tr>
+                <td class="center">地址：</td>
+                <td id="p-buyerAddress"></td>
+            </tr>
+            <tr class="center bold" style="background-color: #f9f9f9;">
+                <td>品名</td>
+                <td>數量</td>
+                <td>單價</td>
+                <td>金額</td>
+                <td>備註</td>
+            </tr>
+            <tr class="center">
+                <td>五寮尖大羊奶</td>
+                <td id="p-qty1"></td>
+                <td>141</td>
+                <td id="p-amt1"></td>
+                <td></td>
+            </tr>
+            <tr class="center">
+                <td>五寮尖中羊奶</td>
+                <td id="p-qty2"></td>
+                <td>83</td>
+                <td id="p-amt2"></td>
+                <td></td>
+            </tr>
+            <tr>
+                <td colspan="2">合計新台幣（中文大寫）： <span id="p-totalZh" class="bold" style="font-size: 20px; margin-left: 10px;"></span></td>
+                <td class="center bold">小計</td>
+                <td class="center bold" id="p-totalNum" style="font-size: 20px;"></td>
+                <td></td>
+            </tr>
+            <tr>
+                <td class="center">本人簽章</td>
+                <td class="center">
+                    <div class="stamp-box">邱順群</div>
+                </td>
+                <td class="center">國民身分證<br>統一編號</td>
+                <td colspan="2" class="center">F128411025</td>
+            </tr>
+            <tr>
+                <td class="center">農民姓名：<br><br>住址：</td>
+                <td colspan="4">邱順群<br><br>新北市三峽區金圳里圳頭路1鄰21號</td>
+            </tr>
+            <tr>
+                <td class="center">附註</td>
+                <td colspan="4" style="font-size: 14px; text-align: justify; line-height: 1.6;">
+                    依據財政部 68.11.01 台財稅第 37665 號函: 自 68 年 11 月 16 日起，凡農民出售其本身所生產、捕獲或畜養之農林漁牧產品所出具之收據，一律免印花稅。農民資格之認定標準，依照農業發展條例第3條及該條例施行細則第1條第1款規定係指直接作業或經營農業生產之自然人。
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+
+<script>
+    // 數字轉中文大寫邏輯
+    function convertToChinese(num) {
+        if (!num || num === 0) return "零元整";
+        const chnNumChar = ["零","壹","貳","參","肆","伍","陸","柒","捌","玖"];
+        const chnUnitChar = ["","拾","佰","仟"];
+        const chnUnitSection = ["","萬","億","兆"];
+        let strIns = '', chnStr = '';
+        let unitPos = 0, zero = true;
+        while(num > 0){
+            let v = num % 10;
+            if(v === 0){
+                if(!zero){
+                    zero = true;
+                    chnStr = chnNumChar[v] + chnStr;
+                }
+            }else{
+                zero = false;
+                strIns = chnNumChar[v];
+                strIns += chnUnitChar[unitPos];
+                chnStr = strIns + chnStr;
+            }
+            unitPos++;
+            num = Math.floor(num / 10);
+        }
+        if (chnStr.startsWith('零')) chnStr = chnStr.substring(1);
+        return chnStr + "元整";
+    }
+
+    // 更新收據畫面邏輯
+    function updateReceipt() {
+        // 更新日期 (轉換為民國年)
+        const dateInput = document.getElementById('input-date').value;
+        if(dateInput) {
+            const d = new Date(dateInput);
+            document.getElementById('p-yy').innerText = d.getFullYear() - 1911;
+            document.getElementById('p-mm').innerText = d.getMonth() + 1;
+            document.getElementById('p-dd').innerText = d.getDate();
+        }
+
+        // 更新買方資訊
+        document.getElementById('p-buyerName').innerText = document.getElementById('input-buyer-name').value;
+        document.getElementById('p-buyerTaxId').innerText = document.getElementById('input-buyer-taxid').value;
+        document.getElementById('p-buyerAddress').innerText = document.getElementById('input-buyer-addr').value;
+
+        // 計算金額
+        const qty1 = parseInt(document.getElementById('input-qty1').value) || 0;
+        const qty2 = parseInt(document.getElementById('input-qty2').value) || 0;
+        const price1 = 141;
+        const price2 = 83;
+        
+        const amt1 = qty1 * price1;
+        const amt2 = qty2 * price2;
+        const total = amt1 + amt2;
+
+        // 更新表格數據
+        document.getElementById('p-qty1').innerText = qty1 || '';
+        document.getElementById('p-amt1').innerText = amt1 || '';
+        document.getElementById('p-qty2').innerText = qty2 || '';
+        document.getElementById('p-amt2').innerText = amt2 || '';
+        
+        document.getElementById('p-totalNum').innerText = total || '';
+        document.getElementById('p-totalZh').innerText = total > 0 ? convertToChinese(total) : '';
+    }
+
+    // 綁定事件：當輸入框內容改變時即時更新
+    document.querySelectorAll('input').forEach(input => {
+        input.addEventListener('input', updateReceipt);
+    });
+
+    // 預設填入今天日期
+    document.getElementById('input-date').valueAsDate = new Date();
+    updateReceipt();
+</script>
+
+</body>
+</html>
