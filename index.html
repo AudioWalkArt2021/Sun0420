@@ -3,305 +3,312 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>農產物收據系統 (會計完美核銷版)</title>
+    <title>農產物收據自動化系統 (總經理指定版)</title>
     <style>
-        /* ================= 1. 手機操作介面 ================= */
-        body { font-family: "Microsoft JhengHei", "微軟正黑體", sans-serif; margin: 0; padding: 0; background-color: #f0f2f5; padding-bottom: env(safe-area-inset-bottom); }
-        .control-panel { padding: 15px; background-color: #fff; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
-        h1 { font-size: 20px; color: #d35400; margin: 0 0 15px 0; font-weight: bold; }
-        .form-group { margin-bottom: 12px; }
-        label { display: block; margin-bottom: 4px; font-weight: bold; font-size: 14px; color: #444; }
-        input, select { width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 8px; box-sizing: border-box; font-size: 16px; background-color: #fafafa; -webkit-appearance: none; }
-        input:focus, select:focus { outline: none; border-color: #d35400; background-color: #fff; }
-        .flex-row { display: flex; gap: 10px; }
-        .flex-row .form-group { flex: 1; margin-bottom: 0; }
-        .btn-print { background-color: #d35400; color: white; padding: 16px; border: none; border-radius: 8px; font-size: 18px; width: 100%; cursor: pointer; font-weight: bold; margin-top: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
-        .btn-print:active { background-color: #e67e22; transform: translateY(2px); box-shadow: none; }
+        /* ================= 1. 操作介面 (列印時隱藏) ================= */
+        body { font-family: "Microsoft JhengHei", "微軟正黑體", sans-serif; margin: 0; padding: 0; background-color: #f4f6f8; }
+        .control-panel { padding: 15px; background-color: #fff; box-shadow: 0 2px 8px rgba(0,0,0,0.1); max-width: 800px; margin: 0 auto 20px auto; }
+        h1 { font-size: 18px; color: #1f3a93; border-bottom: 2px solid #1f3a93; padding-bottom: 8px; }
+        .form-row { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 12px; }
+        .form-group { flex: 1; min-width: 120px; }
+        label { display: block; font-size: 13px; font-weight: bold; margin-bottom: 4px; color: #555; }
+        input { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; font-size: 15px; }
+        .item-group { background: #eef2f5; padding: 10px; border-radius: 6px; margin-bottom: 10px; border: 1px solid #d2d7dc; }
+        .item-title { font-size: 14px; font-weight: bold; color: #333; margin-bottom: 8px; }
+        .btn-print { background-color: #1f3a93; color: white; padding: 15px; border: none; border-radius: 6px; font-size: 18px; width: 100%; cursor: pointer; font-weight: bold; margin-top: 10px; }
         
-        /* ================= 2. 螢幕預覽區域 ================= */
-        .preview-container { 
-            width: 100%; 
-            overflow-x: auto; 
-            background-color: #7f8c8d; 
-            padding: 20px 0;
-            -webkit-overflow-scrolling: touch;
-        }
-
-        /* ================= 3. 收據核心排版 (A5 半張A4) ================= */
-        .receipt-wrapper { 
+        /* ================= 2. 收據完美還原排版 (A4 橫式 或 A5) ================= */
+        .preview-container { width: 100%; overflow-x: auto; padding-bottom: 20px; }
+        .receipt-paper { 
             background: white; 
-            width: 210mm; 
-            height: 148.5mm; 
+            width: 210mm; /* A5 橫向寬度或縮小版 A4 */
             margin: 0 auto; 
             box-sizing: border-box; 
-            position: relative;
-            padding: 10mm 15mm 10mm 18mm; 
+            padding: 10px;
             color: #000;
         }
+
+        /* 標題與日期 */
+        .header-section { position: relative; border: 2px solid #000; border-bottom: none; background-color: #e8e8e8; padding: 8px; display: flex; justify-content: center; align-items: center; }
+        .main-title { font-size: 20pt; font-weight: bold; letter-spacing: 2px; margin-right: 20px; }
+        .date-text { font-size: 14pt; font-weight: bold; position: absolute; right: 15px; }
+
+        /* 主表格設定 */
+        table.r-table { 
+            width: 100%; 
+            border-collapse: collapse; 
+            border: 2px solid #000; 
+            table-layout: fixed; 
+        }
+        table.r-table th, table.r-table td { 
+            border: 1px solid #000; 
+            padding: 8px 6px; 
+            vertical-align: middle; 
+            font-size: 12pt;
+        }
         
-        /* 側邊直書 */
-        .side-note { position: absolute; left: 8mm; top: 22mm; writing-mode: vertical-rl; font-size: 9pt; letter-spacing: 1px; height: 100mm; color: #555; }
+        /* 附件圖片的淺灰色底色對應 */
+        .bg-gray { background-color: #e8e8e8; }
+        .bg-dark { background-color: #333; color: white; font-weight: bold; text-align: center; }
         
-        .r-title { text-align: center; font-size: 18pt; font-weight: bold; letter-spacing: 4px; margin-bottom: 3px; }
-        .r-date { text-align: right; font-size: 12pt; margin-bottom: 6px; font-weight: bold; }
-        
-        /* 表格結構改為 4 欄 */
-        table.r-table { width: 100%; border-collapse: collapse; border: 2px solid #000; table-layout: fixed; }
-        table.r-table th, table.r-table td { border: 1px solid #000; padding: 6px 8px; vertical-align: middle; }
+        /* 欄位寬度比例對應 (共 6 欄) */
+        .col-name { width: 25%; }
+        .col-qty { width: 12%; text-align: center;}
+        .col-price { width: 12%; text-align: center;}
+        .col-amt { width: 15%; text-align: right; padding-right: 10px;}
+        .col-sub { width: 16%; text-align: right; padding-right: 10px;}
+        .col-note { width: 20%; }
+
         .center { text-align: center; }
-        .right { text-align: right; }
-        .lbl-bg { background-color: #f9f9f9; }
+        .bold { font-weight: bold; }
+        .fs-14 { font-size: 14pt; }
+        
+        /* 中文大寫數字專用槽 */
+        .ch-slot { display: inline-block; width: 40px; text-align: center; font-weight: bold; font-size: 14pt; }
 
-        /* ================= 4. 字級與空間設定 (pt) ================= */
-        .fs-8 { font-size: 8pt; line-height: 1.2; color: #333; } /* 附註專用 */
-        .fs-10 { font-size: 10pt; line-height: 1.3; } /* 住址等 */
-        .fs-14 { font-size: 14pt; font-weight: bold; } /* 品名與數量 */
-        .fs-18 { font-size: 18pt; font-weight: bold; font-family: Arial, sans-serif; letter-spacing: 1px; } /* 金額數字 */
-        
-        /* 會計核對重點：20號中文大寫 */
-        .fs-20 { font-size: 20pt; font-weight: 900; letter-spacing: 4px; text-decoration: underline; color: #000; display: inline-block; margin-top: 8px; }
-        
-        .val-large { font-size: 13pt; font-weight: bold; color: #000; }
-        .lbl { font-size: 11pt; font-weight: normal; color: #111; }
-        
-        /* 簽名蓋章專屬空間 (維持寬敞的 60px) */
-        .stamp-space { height: 60px; display: flex; align-items: center; justify-content: center; } 
+        /* 底部署名與附註 */
+        .fine-print { font-size: 9pt; text-align: justify; line-height: 1.4; padding: 6px 10px; }
+        .footer-warning { text-align: center; font-size: 12pt; font-weight: bold; letter-spacing: 1px; padding: 10px; background-color: #e8e8e8; }
 
-        /* ================= 5. 列印專用設定 ================= */
+        /* ================= 3. 列印設定 ================= */
         @media screen { .print-only { display: none; } }
         @media print {
             body { background: white; margin: 0; padding: 0; }
             .no-print { display: none !important; }
             .print-only { display: block; }
-            @page { size: A4 portrait; margin: 0; }
-            .print-page { width: 210mm; height: 297mm; display: flex; flex-direction: column; }
-            .print-page .receipt-wrapper:first-child { border-bottom: 1px dashed #ccc; }
+            .receipt-paper { width: 100%; padding: 0; }
+            @page { size: A4 landscape; margin: 10mm; }
         }
     </style>
 </head>
 <body>
 
-<div class="no-print">
-    <div class="control-panel">
-        <h1>✅ 出貨收據系統 (會計核對版)</h1>
-        
-        <div class="form-group" style="background-color: #fff3e0; padding: 10px; border-radius: 8px; border: 1px solid #ffe0b2;">
-            <label style="color:#e65100;">🏢 預設農會帶入</label>
-            <select id="in-preset" onchange="applyPreset()">
-                <option value="">-- 手動輸入 或 快速選擇 --</option>
-                <option value="三峽">新北市三峽區農會 (83076928)</option>
-                <option value="三重">新北市三重區農會 (78295698)</option>
-                <option value="土城">新北市土城區農會 (33002958)</option>
-            </select>
-        </div>
-
-        <div class="flex-row">
-            <div class="form-group" style="flex: 1.2;">
-                <label>開立日期</label>
-                <input type="date" id="in-date">
-            </div>
-            <div class="form-group" style="flex: 1;">
-                <label>統一編號</label>
-                <input type="tel" id="in-tax" placeholder="統編數字">
-            </div>
-        </div>
-        
-        <div class="form-group">
-            <label>買方抬頭名稱</label>
-            <input type="text" id="in-name" placeholder="請輸入客戶名稱">
-        </div>
-        
-        <div class="flex-row" style="margin-top: 15px; background: #e3f2fd; padding: 10px; border-radius: 8px; border: 1px solid #bbdefb;">
-            <div class="form-group">
-                <label>🍼 大羊奶 (單價 141)</label>
-                <input type="number" id="in-qty1" placeholder="數量" min="0">
-            </div>
-            <div class="form-group">
-                <label>🥛 中羊奶 (單價 83)</label>
-                <input type="number" id="in-qty2" placeholder="數量" min="0">
-            </div>
-        </div>
-
-        <button class="btn-print" onclick="window.print()">🖨️ 列印收據 (一頁兩張)</button>
+<div class="control-panel no-print">
+    <h1>⚙️ 收據自動化生成系統 (支援5品項)</h1>
+    
+    <div class="form-row">
+        <div class="form-group"><label>開立日期</label><input type="date" id="in-date"></div>
+    </div>
+    <div class="form-row">
+        <div class="form-group" style="flex: 2;"><label>購貨商號名稱</label><input type="text" id="in-buyer-name" placeholder="請輸入名稱"></div>
+        <div class="form-group" style="flex: 1;"><label>統一編號</label><input type="text" id="in-buyer-tax"></div>
+    </div>
+    <div class="form-row">
+        <div class="form-group"><label>地址</label><input type="text" id="in-buyer-addr" placeholder="請輸入地址"></div>
     </div>
 
-    <div class="preview-container">
-        <div style="text-align: center; color: white; font-size: 13px; margin-bottom: 8px;">👇 真實版面預覽 (左右滑動) 👇</div>
-        <div id="preview-area"></div>
-    </div>
-</div>
-
-<div class="print-only">
-    <div class="print-page" id="print-area"></div>
-</div>
-
-<template id="receipt-template">
-    <div class="receipt-wrapper">
-        <div class="side-note">本收據之農民身分確實無誤，若有不實者願依法接受處罰。 對內容有疑問請優先聯繫 : 0923-287-545</div>
-        <div>
-            <div class="r-title">農（漁、牧）民出售 農（漁、牧）產物 收據</div>
-            <div class="r-date">中華民國 <span class="d-yy val-large"></span> 年 <span class="d-mm val-large"></span> 月 <span class="d-dd val-large"></span> 日</div>
+    <div class="item-group">
+        <div class="item-title">常規商品數量</div>
+        <div class="form-row">
+            <div class="form-group"><label>大羊奶 (單價141)</label><input type="number" id="in-qty1" class="calc-input" placeholder="數量"></div>
+            <div class="form-group"><label>中羊奶 (單價83)</label><input type="number" id="in-qty2" class="calc-input" placeholder="數量"></div>
         </div>
-        
+    </div>
+
+    <div class="item-group">
+        <div class="item-title">自訂擴充品項 (可留空)</div>
+        <div class="form-row">
+            <div class="form-group" style="flex: 2;"><input type="text" id="in-name3" placeholder="品名 3"></div>
+            <div class="form-group" style="flex: 1;"><input type="number" id="in-price3" class="calc-input" placeholder="單價"></div>
+            <div class="form-group" style="flex: 1;"><input type="number" id="in-qty3" class="calc-input" placeholder="數量"></div>
+        </div>
+        <div class="form-row">
+            <div class="form-group" style="flex: 2;"><input type="text" id="in-name4" placeholder="品名 4"></div>
+            <div class="form-group" style="flex: 1;"><input type="number" id="in-price4" class="calc-input" placeholder="單價"></div>
+            <div class="form-group" style="flex: 1;"><input type="number" id="in-qty4" class="calc-input" placeholder="數量"></div>
+        </div>
+        <div class="form-row">
+            <div class="form-group" style="flex: 2;"><input type="text" id="in-name5" placeholder="品名 5"></div>
+            <div class="form-group" style="flex: 1;"><input type="number" id="in-price5" class="calc-input" placeholder="單價"></div>
+            <div class="form-group" style="flex: 1;"><input type="number" id="in-qty5" class="calc-input" placeholder="數量"></div>
+        </div>
+    </div>
+
+    <button class="btn-print" onclick="window.print()">🖨️ 產生並列印收據</button>
+</div>
+
+<div class="preview-container">
+    <div class="receipt-paper">
+        <div class="header-section">
+            <div class="main-title">農（漁、牧）民出售 農（漁、牧）產物 收據</div>
+            <div class="date-text">中華民國 <span id="v-yy">115</span> 年 <span id="v-mm" style="display:inline-block; width:25px; text-align:center;"></span> 月 <span id="v-dd" style="display:inline-block; width:25px; text-align:center;"></span> 日</div>
+        </div>
+
         <table class="r-table">
-            <colgroup>
-                <col style="width: 25%;"> <col style="width: 25%;"> <col style="width: 20%;"> <col style="width: 30%;"> </colgroup>
-            
             <tr>
-                <td class="lbl">購買商號名稱：</td>
-                <td colspan="3" class="val-large v-buyer-name"></td>
+                <td colspan="3" class="bg-gray" style="width: 50%;">購貨商號名稱： <span id="v-buyer-name" style="background: white; padding: 2px 10px;"></span></td>
+                <td colspan="3" rowspan="2" class="bg-gray" style="vertical-align: top;">地址： <span id="v-buyer-addr" style="background: white; padding: 2px 10px;"></span></td>
             </tr>
             <tr>
-                <td class="lbl">統一編號：</td>
-                <td class="val-large v-buyer-taxid"></td>
-                <td class="lbl center">地址：</td>
-                <td class="lbl"></td> 
+                <td colspan="3" class="bg-gray">統一編號　　： <span id="v-buyer-tax" style="background: white; padding: 2px 10px;"></span></td>
             </tr>
             
-            <tr class="center lbl-bg lbl">
-                <td>品名</td>
-                <td>數量</td>
-                <td>單價</td>
-                <td>金額 (小計)</td>
-            </tr>
-            <tr class="center">
-                <td class="fs-14">五寮尖大羊奶</td> 
-                <td class="fs-14 v-qty1"></td>      
-                <td class="val-large">141</td>
-                <td class="fs-18 v-amt1"></td>      
-            </tr>
-            <tr class="center">
-                <td class="fs-14">五寮尖中羊奶</td> 
-                <td class="fs-14 v-qty2"></td>      
-                <td class="val-large">83</td>
-                <td class="fs-18 v-amt2"></td>      
-            </tr>
-            <tr>
-                <td colspan="3" class="lbl right" style="padding-right: 15px;">總計金額：</td>
-                <td class="center fs-18 v-total-num"></td> 
+            <tr class="bg-dark">
+                <td class="col-name">品名</td>
+                <td class="col-qty">數量</td>
+                <td class="col-price">單價</td>
+                <td class="col-amt">金額</td>
+                <td class="col-sub">小計</td>
+                <td class="col-note">備註</td>
             </tr>
 
             <tr>
-                <td colspan="4" class="lbl center" style="padding: 15px 8px; background-color: #fafafa;">
-                    合計新台幣（中文大寫）<br>
-                    <span class="fs-20 v-total-zh"></span>
+                <td class="bold fs-14">五寮尖 大羊奶</td>
+                <td class="center fs-14" id="v-qty1"></td>
+                <td class="center fs-14">141</td>
+                <td class="col-amt fs-14 bold" id="v-amt1"></td>
+                <td rowspan="5" class="col-sub fs-14 bold" style="font-size: 16pt; vertical-align: bottom; padding-bottom: 10px;" id="v-subtotal"></td>
+                <td rowspan="5"></td>
+            </tr>
+            <tr>
+                <td class="bold fs-14">五寮尖 中羊奶</td>
+                <td class="center fs-14" id="v-qty2"></td>
+                <td class="center fs-14">83</td>
+                <td class="col-amt fs-14 bold" id="v-amt2"></td>
+            </tr>
+            <tr>
+                <td id="v-name3"></td><td class="center" id="v-qty3"></td><td class="center" id="v-price3"></td><td class="col-amt" id="v-amt3"></td>
+            </tr>
+            <tr>
+                <td id="v-name4"></td><td class="center" id="v-qty4"></td><td class="center" id="v-price4"></td><td class="col-amt" id="v-amt4"></td>
+            </tr>
+            <tr>
+                <td id="v-name5"></td><td class="center" id="v-qty5"></td><td class="center" id="v-price5"></td><td class="col-amt" id="v-amt5"></td>
+            </tr>
+
+            <tr>
+                <td colspan="6" class="bg-gray" style="padding: 15px 10px;">
+                    <span style="color: #666;">合計新台幣 (中文大寫)：</span>
+                    <span id="v-chinese-total" style="margin-left: 20px; font-size: 14pt; font-weight: bold; letter-spacing: 2px;">
+                        <span class="ch-slot"></span> 仟 
+                        <span class="ch-slot"></span> 佰 
+                        <span class="ch-slot"></span> 拾 
+                        <span class="ch-slot"></span> 元整。
+                    </span>
                 </td>
             </tr>
 
             <tr>
-                <td class="lbl">農民姓名：</td>
-                <td class="val-large center">邱順群</td>
-                <td class="lbl center" style="font-size: 10pt;">身分證字號：</td>
-                <td class="val-large center">F128411025</td>
+                <td rowspan="2" class="bg-gray center" style="width: 50px; line-height: 2;">本人<br>簽章</td>
+                <td colspan="2" class="bg-gray center">國民身分證統一編號</td>
+                <td colspan="3" class="bg-gray">農名姓名： <span class="bold">邱順群</span></td>
             </tr>
             <tr>
-                <td class="lbl">農民住址：</td>
-                <td colspan="3" class="fs-10">新北市三峽區金圳里圳頭路1鄰21號</td>
-            </tr>
-            
-            <tr>
-                <td class="lbl center">本人簽章：</td>
-                <td colspan="3"><div class="stamp-space"></div></td>
+                <td colspan="2" class="center bold fs-14">F128411025</td>
+                <td colspan="3">住址　　： 新北市三峽區金圳里圳頭路1鄰21號</td>
             </tr>
             
             <tr>
-                <td class="lbl center" style="font-size: 8pt;">附註</td>
-                <td colspan="3" class="fs-8" style="text-align: justify; padding: 6px 8px;">依據財政部 68.11.01 台財稅第 37665 號函: 自 68 年 11 月 16 日起，凡農民出售其本身所生產、捕獲或畜養之農林漁牧產品所出具之收據，一律免印花稅。農民資格之認定標準，依照農業發展條例第3條及該條例施行細則第1條第1款規定係指直接作業或經營農業生產之自然人。</td>
+                <td class="bg-gray center">附<br>註</td>
+                <td colspan="5" class="fine-print">依據財政部 68.11.01 台財稅第 37665 號函: 自 68 年 11 月 16 日起，凡農民出售其本身所生產、捕獲或畜養之農林漁牧產品所出具之收據，一律免印花稅。農民資格之認定標準，依照農業發展條例第3條及該條例施行細則第1條第1款規定係指直接作業或經營農業生產之自然人。</td>
+            </tr>
+            <tr>
+                <td colspan="6" class="footer-warning">本收據之農民身分確實無誤，若有不實者願依法接受處罰。 對內容有疑問請優先聯繫：0923-287-545</td>
             </tr>
         </table>
     </div>
-</template>
+</div>
 
 <script>
-    const presetsData = {
-        "三峽": { name: "新北市三峽區農會", taxid: "83076928" },
-        "三重": { name: "新北市三重區農會", taxid: "78295698" },
-        "土城": { name: "新北市土城區農會", taxid: "33002958" }
-    };
+    // 中文數字轉換字典
+    const cnNums = ['零', '壹', '貳', '參', '肆', '伍', '陸', '柒', '捌', '玖'];
 
-    function applyPreset() {
-        const selected = document.getElementById('in-preset').value;
-        if (presetsData[selected]) {
-            document.getElementById('in-name').value = presetsData[selected].name;
-            document.getElementById('in-tax').value = presetsData[selected].taxid;
-            updateData();
+    function updateReceipt() {
+        // 1. 更新基本資料
+        const dateInput = document.getElementById('in-date').value;
+        if(dateInput) {
+            const d = new Date(dateInput);
+            document.getElementById('v-yy').innerText = d.getFullYear() - 1911; // 轉民國年
+            document.getElementById('v-mm').innerText = d.getMonth() + 1;
+            document.getElementById('v-dd').innerText = d.getDate();
+        }
+        
+        document.getElementById('v-buyer-name').innerText = document.getElementById('in-buyer-name').value;
+        document.getElementById('v-buyer-tax').innerText = document.getElementById('in-buyer-tax').value;
+        document.getElementById('v-buyer-addr').innerText = document.getElementById('in-buyer-addr').value;
+
+        // 2. 獲取單價與數量 (包含擴充項目)
+        const items = [
+            { qty: parseInt(document.getElementById('in-qty1').value) || 0, price: 141 },
+            { qty: parseInt(document.getElementById('in-qty2').value) || 0, price: 83 },
+            { name: document.getElementById('in-name3').value, qty: parseInt(document.getElementById('in-qty3').value) || 0, price: parseInt(document.getElementById('in-price3').value) || 0 },
+            { name: document.getElementById('in-name4').value, qty: parseInt(document.getElementById('in-qty4').value) || 0, price: parseInt(document.getElementById('in-price4').value) || 0 },
+            { name: document.getElementById('in-name5').value, qty: parseInt(document.getElementById('in-qty5').value) || 0, price: parseInt(document.getElementById('in-price5').value) || 0 }
+        ];
+
+        let subtotal = 0;
+
+        // 3. 計算並填入每一行
+        items.forEach((item, index) => {
+            const i = index + 1;
+            const amt = item.qty * item.price;
+            subtotal += amt;
+            
+            if (i > 2) { 
+                document.getElementById('v-name'+i).innerText = item.name; 
+                document.getElementById('v-price'+i).innerText = item.price ? item.price : '';
+            }
+            document.getElementById('v-qty'+i).innerText = item.qty ? item.qty : '';
+            document.getElementById('v-amt'+i).innerText = amt ? amt : '';
+        });
+
+        // 4. 更新小計
+        document.getElementById('v-subtotal').innerText = subtotal > 0 ? subtotal : '';
+
+        // 5. 智慧中文大寫轉換 (完美貼合原圖槽位)
+        const chContainer = document.getElementById('v-chinese-total');
+        if (subtotal > 0) {
+            if (subtotal < 10000) {
+                // 如果金額在四位數以內，精準填入原圖的「_仟_佰_拾_元」槽位中
+                const th = Math.floor(subtotal / 1000);
+                const hu = Math.floor((subtotal % 1000) / 100);
+                const te = Math.floor((subtotal % 100) / 10);
+                const un = subtotal % 10;
+                
+                chContainer.innerHTML = `
+                    <span class="ch-slot">${th > 0 ? cnNums[th] : '零'}</span> 仟 
+                    <span class="ch-slot">${hu > 0 || th > 0 ? cnNums[hu] : '零'}</span> 佰 
+                    <span class="ch-slot">${te > 0 || hu > 0 || th > 0 ? cnNums[te] : '零'}</span> 拾 
+                    <span class="ch-slot">${cnNums[un]}</span> 元整。
+                `;
+            } else {
+                // 會計防呆：如果金額破萬，為了防止格子不對應造成法律爭議，直接完整輸出標準大寫字串
+                chContainer.innerHTML = `<span style="text-decoration:underline;">${convertCurrency(subtotal)}</span>`;
+            }
+        } else {
+            // 清空狀態還原預設空槽
+            chContainer.innerHTML = `<span class="ch-slot"></span> 仟 <span class="ch-slot"></span> 佰 <span class="ch-slot"></span> 拾 <span class="ch-slot"></span> 元整。`;
         }
     }
 
-    const template = document.getElementById('receipt-template');
-    document.getElementById('preview-area').appendChild(template.content.cloneNode(true));
-    document.getElementById('print-area').appendChild(template.content.cloneNode(true));
-    document.getElementById('print-area').appendChild(template.content.cloneNode(true));
-
+    // 標準會計大寫轉換函數 (備用，給破萬金額使用)
     function convertCurrency(num) {
-        if (!num || isNaN(num) || num === 0) return "零元整";
-        const cnNums = ['零', '壹', '貳', '參', '肆', '伍', '陸', '柒', '捌', '玖'];
         const cnIntRadice = ['', '拾', '佰', '仟'];
         const cnIntUnits = ['', '萬', '億', '兆'];
-        const cnInteger = '元整';
-        
         let moneyStr = Math.floor(num).toString();
-        let chineseStr = '';
-        let zeroCount = 0;
-        
+        let chineseStr = ''; let zeroCount = 0;
         for (let i = 0; i < moneyStr.length; i++) {
             let p = moneyStr.length - 1 - i;
-            let q = Math.floor(p / 4);
-            let m = p % 4;
-            
-            if (moneyStr[i] === '0') {
-                zeroCount++;
-            } else {
+            let q = Math.floor(p / 4); let m = p % 4;
+            if (moneyStr[i] === '0') { zeroCount++; } 
+            else {
                 if (zeroCount > 0) chineseStr += cnNums[0];
                 zeroCount = 0;
                 chineseStr += cnNums[parseInt(moneyStr[i])] + cnIntRadice[m];
             }
-            if (m === 0 && zeroCount < 4) {
-                chineseStr += cnIntUnits[q];
-            }
+            if (m === 0 && zeroCount < 4) { chineseStr += cnIntUnits[q]; }
         }
-        return chineseStr + cnInteger;
+        return chineseStr + '元整。';
     }
 
-    function updateData() {
-        const data = {
-            'v-buyer-name': document.getElementById('in-name').value,
-            'v-buyer-taxid': document.getElementById('in-tax').value,
-            'v-qty1': document.getElementById('in-qty1').value,
-            'v-qty2': document.getElementById('in-qty2').value,
-        };
-
-        const dateInput = document.getElementById('in-date').value;
-        if(dateInput) {
-            const d = new Date(dateInput);
-            data['d-yy'] = d.getFullYear() - 1911;
-            data['d-mm'] = d.getMonth() + 1;
-            data['d-dd'] = d.getDate();
-        }
-
-        const q1 = parseInt(data['v-qty1']) || 0;
-        const q2 = parseInt(data['v-qty2']) || 0;
-        const total = (q1 * 141) + (q2 * 83);
-
-        data['v-amt1'] = q1 ? q1 * 141 : '';
-        data['v-amt2'] = q2 ? q2 * 83 : '';
-        data['v-total-num'] = total || '';
-        
-        data['v-total-zh'] = total > 0 ? convertCurrency(total) : '';
-
-        for (const key in data) {
-            document.querySelectorAll('.' + key).forEach(el => {
-                el.innerText = data[key];
-            });
-        }
-    }
-
+    // 綁定事件：只要欄位有變更就自動重新計算
     document.querySelectorAll('input').forEach(input => {
-        input.addEventListener('input', updateData);
+        input.addEventListener('input', updateReceipt);
     });
 
+    // 預設填入今天日期
     document.getElementById('in-date').valueAsDate = new Date();
-    updateData(); 
+    updateReceipt();
 </script>
 
 </body>
