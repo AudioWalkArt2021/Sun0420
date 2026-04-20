@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>農產物收據系統 (會計優化/大寫修正版)</title>
+    <title>農產物收據系統 (會計完美核銷版)</title>
     <style>
         /* ================= 1. 手機操作介面 ================= */
         body { font-family: "Microsoft JhengHei", "微軟正黑體", sans-serif; margin: 0; padding: 0; background-color: #f0f2f5; padding-bottom: env(safe-area-inset-bottom); }
@@ -35,7 +35,7 @@
             margin: 0 auto; 
             box-sizing: border-box; 
             position: relative;
-            padding: 10mm 15mm 10mm 18mm; /* 稍微縮小上下外距，將空間讓給中間表格 */
+            padding: 10mm 15mm 10mm 18mm; 
             color: #000;
         }
         
@@ -45,22 +45,26 @@
         .r-title { text-align: center; font-size: 18pt; font-weight: bold; letter-spacing: 4px; margin-bottom: 3px; }
         .r-date { text-align: right; font-size: 12pt; margin-bottom: 6px; font-weight: bold; }
         
+        /* 表格結構改為 4 欄 */
         table.r-table { width: 100%; border-collapse: collapse; border: 2px solid #000; table-layout: fixed; }
-        table.r-table th, table.r-table td { border: 1px solid #000; padding: 5px 8px; vertical-align: middle; }
+        table.r-table th, table.r-table td { border: 1px solid #000; padding: 6px 8px; vertical-align: middle; }
         .center { text-align: center; }
+        .right { text-align: right; }
         .lbl-bg { background-color: #f9f9f9; }
 
         /* ================= 4. 字級與空間設定 (pt) ================= */
-        .fs-10 { font-size: 10pt; line-height: 1.3; } /* 農民資料與法規 */
+        .fs-8 { font-size: 8pt; line-height: 1.2; color: #333; } /* 附註專用 */
+        .fs-10 { font-size: 10pt; line-height: 1.3; } /* 住址等 */
         .fs-14 { font-size: 14pt; font-weight: bold; } /* 品名與數量 */
         .fs-18 { font-size: 18pt; font-weight: bold; font-family: Arial, sans-serif; letter-spacing: 1px; } /* 金額數字 */
+        
+        /* 會計核對重點：20號中文大寫 */
+        .fs-20 { font-size: 20pt; font-weight: 900; letter-spacing: 4px; text-decoration: underline; color: #000; display: inline-block; margin-top: 8px; }
+        
         .val-large { font-size: 13pt; font-weight: bold; color: #000; }
         .lbl { font-size: 11pt; font-weight: normal; color: #111; }
         
-        /* 會計核對重點：中文大寫字體特別強化 */
-        .v-total-zh { font-size: 16pt; font-weight: 900; letter-spacing: 2px; text-decoration: underline; margin-left: 5px; color: #000; }
-        
-        /* 簽名蓋章專屬空間 (擴大為 60px) */
+        /* 簽名蓋章專屬空間 (維持寬敞的 60px) */
         .stamp-space { height: 60px; display: flex; align-items: center; justify-content: center; } 
 
         /* ================= 5. 列印專用設定 ================= */
@@ -79,7 +83,7 @@
 
 <div class="no-print">
     <div class="control-panel">
-        <h1>⚠️ 出貨收據系統 (會計修正版)</h1>
+        <h1>✅ 出貨收據系統 (會計核對版)</h1>
         
         <div class="form-group" style="background-color: #fff3e0; padding: 10px; border-radius: 8px; border: 1px solid #ffe0b2;">
             <label style="color:#e65100;">🏢 預設農會帶入</label>
@@ -122,7 +126,7 @@
     </div>
 
     <div class="preview-container">
-        <div style="text-align: center; color: white; font-size: 13px; margin-bottom: 8px;">👇 真實版面預覽 (左右滑動，大寫金額與印章區已加大) 👇</div>
+        <div style="text-align: center; color: white; font-size: 13px; margin-bottom: 8px;">👇 真實版面預覽 (左右滑動) 👇</div>
         <div id="preview-area"></div>
     </div>
 </div>
@@ -138,64 +142,71 @@
             <div class="r-title">農（漁、牧）民出售 農（漁、牧）產物 收據</div>
             <div class="r-date">中華民國 <span class="d-yy val-large"></span> 年 <span class="d-mm val-large"></span> 月 <span class="d-dd val-large"></span> 日</div>
         </div>
+        
         <table class="r-table">
             <colgroup>
-                <col style="width: 28%;">
-                <col style="width: 17%;">
-                <col style="width: 15%;">
-                <col style="width: 18%;">
-                <col style="width: 22%;">
-            </colgroup>
+                <col style="width: 25%;"> <col style="width: 25%;"> <col style="width: 20%;"> <col style="width: 30%;"> </colgroup>
+            
             <tr>
                 <td class="lbl">購買商號名稱：</td>
-                <td class="val-large v-buyer-name"></td>
-                <td class="lbl center">統一編號：</td>
-                <td colspan="2" class="val-large center v-buyer-taxid"></td>
+                <td colspan="3" class="val-large v-buyer-name"></td>
             </tr>
             <tr>
-                <td class="lbl">地址：</td>
-                <td colspan="4" class="lbl"></td> 
+                <td class="lbl">統一編號：</td>
+                <td class="val-large v-buyer-taxid"></td>
+                <td class="lbl center">地址：</td>
+                <td class="lbl"></td> 
             </tr>
+            
             <tr class="center lbl-bg lbl">
                 <td>品名</td>
                 <td>數量</td>
                 <td>單價</td>
-                <td>金額</td>
-                <td>備註</td>
+                <td>金額 (小計)</td>
             </tr>
             <tr class="center">
                 <td class="fs-14">五寮尖大羊奶</td> 
                 <td class="fs-14 v-qty1"></td>      
                 <td class="val-large">141</td>
                 <td class="fs-18 v-amt1"></td>      
-                <td></td>
             </tr>
             <tr class="center">
                 <td class="fs-14">五寮尖中羊奶</td> 
                 <td class="fs-14 v-qty2"></td>      
                 <td class="val-large">83</td>
                 <td class="fs-18 v-amt2"></td>      
-                <td></td>
             </tr>
             <tr>
-                <td colspan="2" class="lbl" style="padding: 10px 8px;">合計新台幣（中文大寫）：<span class="v-total-zh"></span></td>
-                <td class="center lbl">小計</td>
+                <td colspan="3" class="lbl right" style="padding-right: 15px;">總計金額：</td>
                 <td class="center fs-18 v-total-num"></td> 
-                <td></td>
             </tr>
-            <tr class="center">
-                <td class="lbl">本人簽章</td>
-                <td><div class="stamp-space"></div></td>
-                <td class="lbl" style="font-size: 8pt; line-height: 1.2;">國民身分證<br>統一編號</td>
-                <td colspan="2" class="val-large">F128411025</td>
+
+            <tr>
+                <td colspan="4" class="lbl center" style="padding: 15px 8px; background-color: #fafafa;">
+                    合計新台幣（中文大寫）<br>
+                    <span class="fs-20 v-total-zh"></span>
+                </td>
+            </tr>
+
+            <tr>
+                <td class="lbl">農民姓名：</td>
+                <td class="val-large center">邱順群</td>
+                <td class="lbl center" style="font-size: 10pt;">身分證字號：</td>
+                <td class="val-large center">F128411025</td>
             </tr>
             <tr>
-                <td class="lbl center">農民姓名：<br>住址：</td>
-                <td colspan="4" class="fs-10"><b>邱順群</b><br>新北市三峽區金圳里圳頭路1鄰21號</td>
+                <td class="lbl">農民住址：</td>
+                <td colspan="3" class="fs-10">新北市三峽區金圳里圳頭路1鄰21號</td>
             </tr>
+            
             <tr>
-                <td class="lbl center">附註</td>
-                <td colspan="4" class="fs-10" style="text-align: justify; padding: 4px 8px;">依據財政部 68.11.01 台財稅第 37665 號函: 自 68 年 11 月 16 日起，凡農民出售其本身所生產、捕獲或畜養之農林漁牧產品所出具之收據，一律免印花稅。農民資格之認定標準，依照農業發展條例第3條及該條例施行細則第1條第1款規定係指直接作業或經營農業生產之自然人。</td>
+                <td class="lbl center">本人簽章：</td>
+                <td colspan="3"><div class="stamp-space"></div></td>
+            </tr>
+            
+            <tr>
+                <td class="lbl center" style="font-size: 8pt;">附註</td>
+                <td colspan="3" class="fs-8" style="text-align: justify; padding: 6px 8px;">依據財政部 68.11.01 台財稅第 37665 號函: 自 68 年 11 月 16 日起，凡農民出售其本身所生產、捕獲或畜養之農林漁牧產品所出具之收據，一律免印花稅。農民資格之認定標準，依照農業發展條例第3條及該條例施行細則第1條第1款規定係指直接作業或經營農業生產之自然人。</td>
             </tr>
         </table>
     </div>
@@ -222,7 +233,6 @@
     document.getElementById('print-area').appendChild(template.content.cloneNode(true));
     document.getElementById('print-area').appendChild(template.content.cloneNode(true));
 
-    // 全新：銀行級穩定的中文大寫轉換邏輯
     function convertCurrency(num) {
         if (!num || isNaN(num) || num === 0) return "零元整";
         const cnNums = ['零', '壹', '貳', '參', '肆', '伍', '陸', '柒', '捌', '玖'];
@@ -277,7 +287,6 @@
         data['v-amt2'] = q2 ? q2 * 83 : '';
         data['v-total-num'] = total || '';
         
-        // 套用全新大寫邏輯
         data['v-total-zh'] = total > 0 ? convertCurrency(total) : '';
 
         for (const key in data) {
@@ -292,7 +301,7 @@
     });
 
     document.getElementById('in-date').valueAsDate = new Date();
-    updateData(); // 初始執行一次確保格式正確
+    updateData(); 
 </script>
 
 </body>
